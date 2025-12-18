@@ -24,10 +24,12 @@ export function exportResumeToPDF(resume: Resume): void {
   } = {}): number => {
     let currentY = y
     doc.setFontSize(options.fontSize || 12)
+    // Use 'helvetica' as default font (or 'times' or 'courier')
+    const fontName = 'helvetica'
     if (options.bold) {
-      doc.setFont(undefined, 'bold')
+      doc.setFont(fontName, 'bold')
     } else {
-      doc.setFont(undefined, 'normal')
+      doc.setFont(fontName, 'normal')
     }
     
     const maxWidth = options.maxWidth || contentWidth
