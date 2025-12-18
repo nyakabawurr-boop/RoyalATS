@@ -136,9 +136,9 @@ function parseResumeFromText(text: string): Resume {
             jobTitle: parsed.title,
             company: parsed.company || '',
             location: parsed.location,
-            startDate: parsed.startDate || '',
-            endDate: parsed.endDate,
-            current: parsed.current || false,
+            startDate: '',
+            endDate: '',
+            current: false,
             bullets: [],
           }
         } else if (currentExperience && isBulletPoint(line)) {
