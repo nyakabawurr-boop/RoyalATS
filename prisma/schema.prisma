@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  resumes       Resume[]
+  matchSessions MatchSession[]
+  jobApplications JobApplication[]
+}
+
+model Resume {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  contentJson   String    // JSON string of resume structure
+  rawText       String?   // Plain text version for AI processing
+  isPrimary     Boolean   @default(false)
+  tags          String?   // Comma-separated tags
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  matchSessions MatchSession[]
+  jobApplications JobApplication[]
+}
+
+model MatchSession {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId      String?
+  resume        Resume?   @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  jobTitle      String?
+  company       String?
+  jobDescription String
+  matchScore    Int       // 0-100
+  categoryScores String?  // JSON string of category breakdown
+  matchedKeywords String? // JSON array of matched keywords
+  missingKeywords String? // JSON array of missing keywords
+  createdAt     DateTime  @default(now())
+}
+
+model JobApplication {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId      String?
+  resume        Resume?   @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  jobTitle      String
+  company       String
+  platform      String    @default("LinkedIn")
+  url           String?
+  status        String    @default("Interested") // Interested, Applied, Interview, Offer, Rejected
+  appliedAt     DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+

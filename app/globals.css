@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Grey and Silver White Theme */
+    --background: 0 0% 98%; /* Silver white background */
+    --foreground: 0 0% 20%; /* Dark grey text */
+    --card: 0 0% 100%; /* Pure white cards */
+    --card-foreground: 0 0% 20%; /* Dark grey text on cards */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+    --primary: 0 0% 40%; /* Medium grey for primary actions */
+    --primary-foreground: 0 0% 98%; /* Silver white text on primary */
+    --secondary: 0 0% 95%; /* Light grey for secondary */
+    --secondary-foreground: 0 0% 30%; /* Dark grey text on secondary */
+    --muted: 0 0% 96%; /* Very light grey for muted */
+    --muted-foreground: 0 0% 45%; /* Medium grey text */
+    --accent: 0 0% 92%; /* Light grey accent */
+    --accent-foreground: 0 0% 25%; /* Dark grey text on accent */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 88%; /* Light grey borders */
+    --input: 0 0% 96%; /* Very light grey input backgrounds */
+    --ring: 0 0% 50%; /* Medium grey focus ring */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Night sky background for hero banner */
+.night-sky {
+  background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #2a2f4a 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.night-sky::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(2px 2px at 20% 30%, white, transparent),
+    radial-gradient(2px 2px at 60% 70%, white, transparent),
+    radial-gradient(1px 1px at 50% 50%, white, transparent),
+    radial-gradient(1px 1px at 80% 10%, white, transparent),
+    radial-gradient(2px 2px at 90% 40%, white, transparent),
+    radial-gradient(1px 1px at 33% 60%, white, transparent),
+    radial-gradient(1px 1px at 55% 80%, white, transparent),
+    radial-gradient(2px 2px at 10% 90%, white, transparent),
+    radial-gradient(1px 1px at 70% 20%, white, transparent),
+    radial-gradient(1px 1px at 40% 10%, white, transparent);
+  background-size: 200% 200%;
+  animation: twinkle 20s ease-in-out infinite;
+  opacity: 0.8;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
