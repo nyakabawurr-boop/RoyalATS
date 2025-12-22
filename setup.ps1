@@ -36,7 +36,7 @@ DATABASE_URL="file:./dev.db"
 # AI Provider Configuration
 AI_PROVIDER="gemini"
 OPENAI_API_KEY=""
-GEMINI_API_KEY="AIzaSyAaMdD3AiNBBsfpHW7_2_QROsVWHXfy2T8"
+GEMINI_API_KEY="your-gemini-api-key-here"
 
 # NextAuth (optional)
 NEXTAUTH_URL="http://localhost:3000"

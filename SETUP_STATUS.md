@@ -42,7 +42,7 @@ Your API key is configured in:
 - `setup.ps1` (will be added to .env automatically)
 - `ENV_SETUP.md` (for manual setup)
 
-**Key:** `AIzaSyAaMdD3AiNBBsfpHW7_2_QROsVWHXfy2T8`
+**Key:** Get your API key from https://makersuite.google.com/app/apikey
 
 ## What's Ready
 

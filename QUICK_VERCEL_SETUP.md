@@ -31,7 +31,7 @@ In Vercel project settings → **Environment Variables**, add:
 ```
 DATABASE_URL=your-postgres-connection-string
 AI_PROVIDER=gemini
-GEMINI_API_KEY=AIzaSyAaMdD3AiNBBsfpHW7_2_QROsVWHXfy2T8
+GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
 **💡 Easiest Database Setup:**

@@ -1,12 +1,17 @@
 import { MatchAnalysis, OptimizationPlan, LayoutAnalysis } from '@/types';
 
-const AI_PROVIDER = process.env.AI_PROVIDER || 'openai';
-
 /**
  * AI Integration Layer
  * Supports both OpenAI (ChatGPT) and Google Gemini
  * Switch providers via AI_PROVIDER environment variable
  */
+
+/**
+ * Get the AI provider from environment variables (read at runtime)
+ */
+function getAIProvider(): string {
+  return process.env.AI_PROVIDER || 'openai';
+}
 
 interface AIResponse {
   content: string;
@@ -122,7 +127,8 @@ function extractJSON(text: string): string {
  * Generic AI call function that routes to the appropriate provider
  */
 async function callAI(prompt: string, systemPrompt: string): Promise<string> {
-  if (AI_PROVIDER === 'gemini') {
+  const aiProvider = getAIProvider();
+  if (aiProvider === 'gemini') {
     const response = await callGemini(prompt, systemPrompt);
     // Extract JSON in case there's extra text
     return extractJSON(response);

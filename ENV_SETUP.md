@@ -13,14 +13,14 @@ DATABASE_URL="file:./dev.db"
 # AI Provider Configuration
 AI_PROVIDER="gemini"
 OPENAI_API_KEY=""
-GEMINI_API_KEY="AIzaSyAaMdD3AiNBBsfpHW7_2_QROsVWHXfy2T8"
+GEMINI_API_KEY="your-gemini-api-key-here"
 
 # NextAuth (optional)
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-key-here-change-in-production"
 ```
 
-**Your Gemini API key is already included above!**
+**Important:** Replace `your-gemini-api-key-here` with your actual API key from https://makersuite.google.com/app/apikey
 
 ## Quick Setup Commands
 
