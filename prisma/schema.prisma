@@ -20,6 +20,7 @@ model User {
   resumes       Resume[]
   matchSessions MatchSession[]
   jobApplications JobApplication[]
+  coverLetters  CoverLetter[]
 }
 
 model Resume {
@@ -35,6 +36,7 @@ model Resume {
   updatedAt     DateTime  @updatedAt
   matchSessions MatchSession[]
   jobApplications JobApplication[]
+  coverLetters  CoverLetter[]
 }
 
 model MatchSession {
@@ -68,5 +70,24 @@ model JobApplication {
   notes         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  coverLetters  CoverLetter[]
+}
+
+model CoverLetter {
+  id              String    @id @default(cuid())
+  userId          String?
+  user            User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  content         String    @db.Text
+  tone            String?   // Professional, Enthusiastic, Concise
+  length          String?   // Short, Standard
+  resumeId        String?
+  resume          Resume?    @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  jobApplicationId String?
+  jobApplication  JobApplication? @relation(fields: [jobApplicationId], references: [id], onDelete: SetNull)
+  companyName     String?
+  roleTitle       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 

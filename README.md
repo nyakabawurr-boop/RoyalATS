@@ -5,7 +5,8 @@ A modern web application that helps job seekers optimize their resumes, align wi
 ## Features
 
 - **Job Matching**: Upload your resume and paste a job description to get an ATS-style match score with detailed breakdowns
-- **AI Optimization**: Receive step-by-step guidance to improve your resume's alignment with job descriptions
+- **AI Optimization**: Receive step-by-step guidance to improve your resume's alignment with job descriptions, with before/after ATS scoring comparison
+- **Cover Letter Generator**: Generate tailored, ATS-friendly cover letters for specific job applications with customizable tone and length. Includes editing, DOCX download, and save functionality.
 - **Layout Checker**: Analyze resume formatting for ATS compatibility
 - **Resume Builder**: Create and manage multiple resume versions with a form-based editor
 - **Resume Manager**: Store, organize, and manage all your resume versions
@@ -107,18 +108,56 @@ The app supports both OpenAI and Google Gemini. Switch between them using the `A
    - Matched and missing keywords
    - Detailed feedback
 
-### 2. Resume Optimization
+### 2. Resume Optimization with ATS Scoring
 1. Navigate to **Optimize** page
 2. Paste your resume and job description
-3. Click **Generate Optimization Plan**
-4. Review step-by-step suggestions with before/after examples
-5. Copy suggested improvements to your resume
+3. **Baseline Score** automatically calculates and displays:
+   - Overall Match % (0-100)
+   - Skills Match % (0-100)
+   - Ranking (Strong/Moderate/Weak)
+   - Missing skills and keywords
+4. Click **Generate Optimization Plan**
+5. Review step-by-step suggestions with before/after examples
+6. **After Score** automatically calculates using the optimized resume:
+   - Compare before vs after scores with delta improvements
+   - See improvements in skills alignment
+   - Review missing skills/keywords that were addressed
+7. Toggle between original and optimized resume preview
+8. Edit the optimized resume manually and recalculate the after score
+9. Copy suggested improvements to your resume
+
+### 2a. Cover Letter Generation
+1. After generating an optimization plan, the **Cover Letter** section automatically appears
+2. The cover letter is automatically generated using the same resume and job description
+3. You can customize the cover letter by selecting tone (Professional, Enthusiastic, or Concise) and length (Short or Standard) before generation, or use **Regenerate** after
+4. Edit the generated content as needed in the textarea
+5. Use actions:
+   - **Copy** to clipboard
+   - **Download .docx** to save as a Word document with proper formatting
+   - **Save Cover Letter** to store in the database
+   - **Regenerate** to create a new version with current settings
 
 ### 3. Resume Builder
 1. Navigate to **Resume Builder** page
-2. Fill in personal information, headline, summary
-3. Add skills, work experience, education
-4. Save your resume
+2. **Import existing resume** (optional):
+   - Click "Import Resume" button
+   - Upload PDF, DOCX, TXT, or JSON file
+   - The app will parse and populate form fields automatically
+   - Review and adjust imported data as needed
+3. Fill in personal information, headline, summary
+4. Add skills, work experience, education
+5. Save your resume
+
+**Supported Import Formats:**
+- **PDF**: Text-based PDFs only (password-protected or image-only PDFs may fail)
+- **DOCX**: Microsoft Word documents (2007+)
+- **TXT**: Plain text files
+- **JSON**: Exported resume JSON files
+
+**Import Limitations:**
+- PDF/DOCX parsing extracts text content only; formatting is not preserved
+- Complex layouts may require manual adjustment
+- Maximum file size: 10MB
 
 ### 4. Resume Manager
 1. Navigate to **Resume Manager** page
@@ -139,7 +178,9 @@ RoyalMatch/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
 │   │   ├── match/         # Job matching endpoint
-│   │   ├── optimize/      # Optimization endpoint
+│   │   ├── optimize/      # Optimization endpoint (returns plan + optimized resume)
+│   │   ├── score/         # ATS scoring endpoint (before/after comparison)
+│   │   ├── cover-letter/  # Cover letter generation endpoint
 │   │   └── layout-check/  # Layout analysis endpoint
 │   ├── job-match/         # Job matching page
 │   ├── optimize/          # Optimization page
@@ -149,10 +190,13 @@ RoyalMatch/
 ├── components/            # React components
 │   ├── ui/               # Reusable UI components
 │   ├── layout/           # Layout components
+│   ├── cover-letter-panel.tsx  # Cover letter UI component
+│   ├── score-comparison-card.tsx  # Before/after score comparison component
 │   └── ...               # Feature components
 ├── lib/                  # Utility functions
 │   ├── ai.ts             # AI integration layer
 │   ├── prisma.ts         # Prisma client
+│   ├── cover-letter-export.ts  # DOCX export for cover letters
 │   └── utils.ts          # Helper functions
 ├── prisma/               # Database schema
 │   └── schema.prisma     # Prisma schema
@@ -162,12 +206,13 @@ RoyalMatch/
 
 ## Database Schema
 
-The app uses Prisma with SQLite (easily swappable to Postgres). Main models:
+The app uses Prisma with PostgreSQL (or SQLite for development). Main models:
 
 - **User**: User accounts (optional auth)
 - **Resume**: Stored resume versions
 - **MatchSession**: Job matching analysis results
 - **JobApplication**: Tracked job applications
+- **CoverLetter**: Saved cover letters linked to resumes and job applications
 
 ## Development
 
@@ -189,11 +234,92 @@ npm run build
 npm start
 ```
 
+## Scoring System
+
+The app uses a hybrid scoring approach:
+- **AI Extraction**: Extracts skills and keywords from resume and job description
+- **Deterministic Calculation**: Calculates scores using a clear rubric:
+  - Skills Match % = (matched required skills + 0.5 × matched preferred skills) / total skills weight × 100
+  - Keyword Match % = matched keywords / total keywords × 100
+  - Overall Match % = 60% skills + 30% keywords + 10% role alignment
+  - Ranking: Strong (≥75%), Moderate (50-74%), Weak (<50%)
+
+The same scoring algorithm is used for both before and after optimization to ensure fair comparison.
+
+## Testing Features
+
+### Testing Optimization with Scoring
+
+1. **Baseline Score Calculation**:
+   - Go to Optimize page
+   - Paste resume text and job description
+   - Baseline score should automatically calculate after 1 second
+   - Verify score displays: Overall Match %, Skills Match %, Ranking
+
+2. **After Optimization Score**:
+   - Click "Generate Optimization Plan"
+   - Wait for optimization to complete
+   - After score should automatically calculate
+   - Verify comparison shows delta improvements (+/- %)
+
+3. **Recalculate Score**:
+   - Edit the optimized resume manually
+   - Click "Recalculate After Score"
+   - Verify new score is calculated
+
+### Testing Cover Letter Feature
+
+After setting up the app, test the cover letter feature:
+
+1. **Generate Optimization Plan**: 
+   - Go to Optimize page
+   - Paste resume text and job description
+   - Click "Generate Optimization Plan"
+   - Verify optimization plan appears
+
+2. **Auto-Generate Cover Letter**:
+   - After optimization plan is generated, the Cover Letter section automatically appears
+   - Cover letter starts generating automatically
+   - Verify cover letter appears with proper formatting
+   - Verify it's tailored to the job description and resume
+
+3. **Regenerate Cover Letter**:
+   - Optionally change tone (Professional/Enthusiastic/Concise) or length (Short/Standard)
+   - Click "Regenerate" button
+   - Verify new cover letter is generated with updated settings
+
+4. **Save Cover Letter**:
+   - Click "Save Cover Letter" button
+   - Verify success message appears ("Saved!" with checkmark)
+   - Check database (via Prisma Studio: `npx prisma studio`) to confirm it's saved
+
+5. **Download DOCX**:
+   - Click "Download .docx" button
+   - Verify file downloads with proper filename format: "Cover Letter - [Company] - [Role].docx"
+   - Open file in Microsoft Word or Google Docs
+   - Verify formatting is correct (header, date, body paragraphs)
+
+6. **Copy to Clipboard**:
+   - Click "Copy" button
+   - Verify button shows "Copied!" feedback
+   - Paste in a text editor to verify content
+
+7. **Edit Cover Letter**:
+   - Edit the text in the textarea
+   - Verify changes are preserved
+   - Verify edited content can be saved and downloaded
+
+8. **Test with Different AI Providers**:
+   - Test with `AI_PROVIDER=gemini` (set in .env)
+   - Test with `AI_PROVIDER=openai` (if you have OpenAI key)
+   - Verify cover letter quality is good with both providers
+
 ## Notes
 
 - **Resume Parsing**: The current implementation supports text files. For production, integrate libraries like `pdf-parse` for PDFs and `mammoth` for DOCX files.
 - **Authentication**: The app includes a scaffold for NextAuth but authentication is optional. Implement user sessions as needed.
-- **Database**: SQLite is used for development. To switch to Postgres, update `DATABASE_URL` in `.env` and change the provider in `prisma/schema.prisma`.
+- **Database**: PostgreSQL is used by default. To switch to SQLite for development, update `DATABASE_URL` in `.env` and change the provider in `prisma/schema.prisma`.
+- **Cover Letter Generation**: Uses the same AI provider (OpenAI/Gemini) as configured in environment variables. Cover letters are ATS-friendly and can be customized by tone and length.
 
 ## License
 

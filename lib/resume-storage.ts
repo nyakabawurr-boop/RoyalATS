@@ -6,6 +6,7 @@
 import { Resume, DEFAULT_RESUME } from '@/types/resume'
 
 const STORAGE_KEY = 'royal_resume_drafts'
+const CURRENT_SESSION_KEY = 'royal_resume_current_session'
 const CURRENT_VERSION = '1.0.0'
 
 export function saveResumeToLocalStorage(resume: Resume): void {
@@ -99,6 +100,46 @@ export function importResumeFromJSON(jsonString: string): Resume {
     return migrated
   } catch (error) {
     throw new Error('Invalid resume JSON format')
+  }
+}
+
+/**
+ * Session management for Resume Builder
+ */
+export function startResumeSession(resume: Resume): void {
+  try {
+    localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(resume))
+  } catch (error) {
+    console.error('Failed to start resume session:', error)
+  }
+}
+
+export function getCurrentResumeSession(): Resume | null {
+  try {
+    const stored = localStorage.getItem(CURRENT_SESSION_KEY)
+    if (!stored) return null
+    const resume = JSON.parse(stored) as Resume
+    return migrateResume(resume)
+  } catch (error) {
+    console.error('Failed to load current resume session:', error)
+    return null
+  }
+}
+
+export function endResumeSession(): void {
+  try {
+    localStorage.removeItem(CURRENT_SESSION_KEY)
+  } catch (error) {
+    console.error('Failed to end resume session:', error)
+  }
+}
+
+export function updateCurrentSession(resume: Resume): void {
+  try {
+    resume.updatedAt = new Date().toISOString()
+    localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(resume))
+  } catch (error) {
+    console.error('Failed to update resume session:', error)
   }
 }
 

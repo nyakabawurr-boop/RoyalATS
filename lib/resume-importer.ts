@@ -41,10 +41,13 @@ export async function importResume(file: File): Promise<Resume> {
 
   if (!response.ok) {
     try {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to import file')
+      const errorData = await response.json()
+      // Use server-provided message if available, otherwise use error code
+      const errorMessage = errorData.message || errorData.error || `Server returned error status ${response.status}`
+      throw new Error(errorMessage)
     } catch (parseError) {
-      throw new Error(`Server returned error status ${response.status}`)
+      // If JSON parsing fails, provide a generic message with status code
+      throw new Error(`Server returned error status ${response.status}. Please try again or use a different file format.`)
     }
   }
 

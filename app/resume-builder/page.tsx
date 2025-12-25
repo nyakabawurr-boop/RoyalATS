@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Resume, DEFAULT_RESUME } from '@/types/resume'
-import { createNewResume, saveResumeToLocalStorage, getResumeDrafts, importResumeFromJSON, exportResumeToJSON } from '@/lib/resume-storage'
+import { createNewResume, saveResumeToLocalStorage, getResumeDrafts, importResumeFromJSON, exportResumeToJSON, startResumeSession, getCurrentResumeSession, endResumeSession, updateCurrentSession } from '@/lib/resume-storage'
 import { exportResumeToPDF } from '@/lib/resume-export-new'
 import { importResume } from '@/lib/resume-importer'
 import { TemplateRenderer, TEMPLATE_OPTIONS } from '@/components/resume/template-renderer'
@@ -35,28 +35,54 @@ const SECTIONS = [
 type SectionId = typeof SECTIONS[number]['id']
 
 export default function ResumeBuilderPage() {
-  const [resume, setResume] = useState<Resume>(() => createNewResume())
+  const [resume, setResume] = useState<Resume>(() => {
+    // Try to restore session on mount
+    const session = getCurrentResumeSession()
+    return session || createNewResume()
+  })
   const [activeSection, setActiveSection] = useState<SectionId>('contact')
   const [hasChanges, setHasChanges] = useState(false)
   const [showLanding, setShowLanding] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [sessionActive, setSessionActive] = useState(() => !!getCurrentResumeSession())
 
-  // Auto-save to localStorage
+  // Auto-save to localStorage and session
   useEffect(() => {
     if (!hasChanges) return
     
     const timeoutId = setTimeout(() => {
       saveResumeToLocalStorage(resume)
+      if (sessionActive) {
+        updateCurrentSession(resume)
+      }
       setHasChanges(false)
     }, 1000) // Debounce 1 second
 
     return () => clearTimeout(timeoutId)
-  }, [resume, hasChanges])
+  }, [resume, hasChanges, sessionActive])
 
   const updateResume = useCallback((updates: Partial<Resume>) => {
     setResume(prev => ({ ...prev, ...updates }))
     setHasChanges(true)
   }, [])
+
+  const handleStartSession = useCallback(() => {
+    startResumeSession(resume)
+    setSessionActive(true)
+    setShowLanding(false)
+  }, [resume])
+
+  const handleEndSession = useCallback(() => {
+    if (confirm('End current session? Your progress will be saved to drafts, but the session will be cleared.')) {
+      // Save to drafts before ending
+      saveResumeToLocalStorage(resume)
+      endResumeSession()
+      setSessionActive(false)
+      setResume(createNewResume())
+      setActiveSection('contact')
+      setShowLanding(true)
+    }
+  }, [resume])
 
   const handleExportPDF = () => {
     exportResumeToPDF(resume)
@@ -84,11 +110,14 @@ export default function ResumeBuilderPage() {
         try {
           const imported = await importResume(file)
           setResume(imported)
+          startResumeSession(imported)
+          setSessionActive(true)
           setShowLanding(false)
           setHasChanges(true)
         } catch (error) {
           console.error('Import error:', error)
-          alert(`Failed to import resume: ${error instanceof Error ? error.message : 'Unknown error'}\n\nNote: PDF and DOCX parsing may not extract all information perfectly. You may need to review and adjust the imported data.`)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+          alert(`Failed to import resume: ${errorMessage}\n\nNote: PDF and DOCX parsing may not extract all information perfectly. You may need to review and adjust the imported data.`)
         } finally {
           setImporting(false)
         }
@@ -98,11 +127,20 @@ export default function ResumeBuilderPage() {
   }
 
   const handleNewResume = () => {
-    if (confirm('Create a new resume? Unsaved changes will be lost.')) {
-      setResume(createNewResume())
+    if (confirm('Create a new resume? Current session will be saved to drafts.')) {
+      // Save current session before creating new
+      if (sessionActive) {
+        saveResumeToLocalStorage(resume)
+      }
+      const newResume = createNewResume()
+      setResume(newResume)
       setActiveSection('contact')
       setShowLanding(false)
       setHasChanges(false)
+      // Start new session
+      if (sessionActive) {
+        startResumeSession(newResume)
+      }
     }
   }
 
@@ -125,8 +163,11 @@ export default function ResumeBuilderPage() {
           
           <div className="space-y-4">
             <Button onClick={() => {
+              const newResume = createNewResume()
+              setResume(newResume)
+              startResumeSession(newResume)
+              setSessionActive(true)
               setShowLanding(false)
-              setResume(createNewResume())
             }} size="lg" className="w-full">
               Start New Resume
             </Button>
@@ -163,6 +204,17 @@ export default function ResumeBuilderPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Resume Builder</h2>
             <div className="flex gap-2">
+              {sessionActive && (
+                <Button 
+                  onClick={handleEndSession} 
+                  variant="outline" 
+                  size="sm" 
+                  title="End Session"
+                  className="text-orange-600 hover:text-orange-700"
+                >
+                  End Session
+                </Button>
+              )}
               <Button onClick={handleNewResume} variant="outline" size="sm" title="New Resume">
                 New
               </Button>
@@ -174,6 +226,12 @@ export default function ResumeBuilderPage() {
               </Button>
             </div>
           </div>
+          {sessionActive && (
+            <div className="text-xs text-green-600 mb-2 flex items-center gap-1">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              Session active - Auto-saving
+            </div>
+          )}
 
           {/* Template Selector */}
           <div className="mb-4">

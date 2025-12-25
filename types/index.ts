@@ -24,6 +24,22 @@ export interface OptimizationStep {
 
 export interface OptimizationPlan {
   steps: OptimizationStep[];
+  optimizedResumeText?: string;  // NEW: Full optimized resume text
+  changesSummary?: string[];      // NEW: Summary of changes made
+}
+
+// Scoring Types
+export type ScoreRanking = 'Strong' | 'Moderate' | 'Weak';
+
+export interface ScoreResponse {
+  overallMatchPct: number;        // 0-100
+  skillsMatchPct: number;         // 0-100
+  ranking: ScoreRanking;
+  matchedSkills: string[];
+  missingSkills: string[];
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  notes: string[];
 }
 
 export interface LayoutAnalysis {
@@ -34,6 +50,31 @@ export interface LayoutAnalysis {
     severity: 'low' | 'medium' | 'high';
   }[];
   recommendations: string[];
+}
+
+// Cover Letter Types
+export type CoverLetterTone = 'Professional' | 'Enthusiastic' | 'Concise';
+export type CoverLetterLength = 'Short' | 'Standard';
+
+export interface CoverLetterRequest {
+  resumeText: string;
+  jobDescription: string;
+  tone?: CoverLetterTone;
+  length?: CoverLetterLength;
+  companyName?: string;
+  roleTitle?: string;
+  hiringManager?: string;
+  location?: string;
+  keyHighlights?: string[];
+  userName?: string;
+  contactInfo?: string;
+}
+
+export interface CoverLetterResponse {
+  coverLetter: string;
+  bulletsUsed: string[];
+  detectedCompany: string | null;
+  detectedRole: string | null;
 }
 
 // Resume Types

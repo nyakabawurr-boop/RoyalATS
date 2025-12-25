@@ -1,4 +1,4 @@
-import { MatchAnalysis, OptimizationPlan, LayoutAnalysis } from '@/types';
+import { MatchAnalysis, OptimizationPlan, LayoutAnalysis, CoverLetterResponse, CoverLetterTone, CoverLetterLength, ScoreResponse, ScoreRanking } from '@/types';
 
 /**
  * AI Integration Layer
@@ -193,14 +193,14 @@ Provide a comprehensive match analysis.`;
 }
 
 /**
- * Generate optimization plan for resume
+ * Generate optimization plan for resume with optimized resume text
  */
 export async function generateOptimizationPlan(
   resumeText: string,
   jobDescription: string
 ): Promise<OptimizationPlan> {
   const systemPrompt = `You are an expert resume optimization assistant. 
-Your task is to create a step-by-step optimization plan to improve a resume's alignment with a job description.
+Your task is to create a step-by-step optimization plan AND a fully rewritten optimized resume that improves alignment with a job description.
 
 CRITICAL: You MUST output ONLY valid JSON. Do not include any text before or after the JSON. No explanations, no markdown formatting, just pure JSON.
 
@@ -218,6 +218,11 @@ Output format (must be valid JSON):
         }
       ]
     }
+  ],
+  "optimizedResumeText": "<FULL rewritten resume text with all optimizations applied. This must be a complete, usable resume that preserves all original information but with improved wording, better keyword alignment, and enhanced ATS-friendliness. DO NOT invent skills, companies, degrees, or achievements that aren't in the original resume. Only rephrase and reorganize existing content.>",
+  "changesSummary": [
+    "<brief summary of key changes made>",
+    "<another change summary>"
   ]
 }
 
@@ -231,11 +236,199 @@ ${resumeText}
 JOB DESCRIPTION:
 ${jobDescription}
 
-Provide a detailed, step-by-step optimization plan with concrete before/after suggestions.`;
+Provide a detailed, step-by-step optimization plan with concrete before/after suggestions. Also provide a fully rewritten optimized resume text that incorporates all the improvements. The optimized resume must:
+- Be truthful: only rephrase/reshape existing content, never invent new qualifications
+- Be ATS-friendly: use standard formatting, keywords from the job description
+- Maintain all original information: same companies, titles, dates, achievements
+- Be ready to use: complete and formatted properly`;
 
   const response = await callAI(prompt, systemPrompt);
-  const parsed = JSON.parse(response);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(response);
+  } catch (e) {
+    // Try to extract JSON if wrapped in markdown
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error('Failed to parse optimization response as JSON');
+    }
+  }
+
+  // Ensure optimizedResumeText and changesSummary exist
+  if (!parsed.optimizedResumeText) {
+    parsed.optimizedResumeText = resumeText; // Fallback to original if not provided
+  }
+  if (!parsed.changesSummary) {
+    parsed.changesSummary = ['Resume optimized for better ATS alignment'];
+  }
+
   return parsed as OptimizationPlan;
+}
+
+/**
+ * Extract skills and keywords from resume and job description using AI
+ * Returns structured data for deterministic scoring
+ */
+async function extractScoringData(
+  resumeText: string,
+  jobDescription: string
+): Promise<{
+  requiredSkills: string[];
+  preferredSkills: string[];
+  resumeSkills: string[];
+  keywords: string[];
+}> {
+  const systemPrompt = `You are an expert ATS analyst. Extract structured data from a resume and job description for scoring purposes.
+
+CRITICAL: You MUST output ONLY valid JSON. Do not include any text before or after the JSON.
+
+Output format (must be valid JSON):
+{
+  "requiredSkills": [<array of hard skills/technologies explicitly required in the job description>],
+  "preferredSkills": [<array of skills listed as "preferred", "nice to have", or "bonus" in the job description>],
+  "resumeSkills": [<array of all technical skills, tools, and technologies mentioned in the resume>],
+  "keywords": [<array of important keywords/phrases from the job description (excluding skills already listed)>]
+}
+
+Be thorough and specific. Use normalized skill names (e.g., "JavaScript" not "JS", "React" not "React.js").`;
+
+  const prompt = `Extract skills and keywords from the following:
+
+RESUME:
+${resumeText}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+Extract all relevant skills and keywords in the specified format.`;
+
+  const response = await callAI(prompt, systemPrompt);
+  let parsed: any;
+  try {
+    // Try parsing directly (OpenAI returns clean JSON)
+    parsed = JSON.parse(response);
+  } catch (e) {
+    // Fallback: extract JSON from text (in case AI wrapped it)
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (e2) {
+        throw new Error('Failed to parse extraction response as JSON');
+      }
+    } else {
+      throw new Error('Failed to parse extraction response as JSON');
+    }
+  }
+
+  return {
+    requiredSkills: Array.isArray(parsed.requiredSkills) ? parsed.requiredSkills : [],
+    preferredSkills: Array.isArray(parsed.preferredSkills) ? parsed.preferredSkills : [],
+    resumeSkills: Array.isArray(parsed.resumeSkills) ? parsed.resumeSkills : [],
+    keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+  };
+}
+
+/**
+ * Calculate ATS-style score for resume against job description
+ * Uses hybrid approach: AI extraction + deterministic scoring
+ */
+export async function calculateScore(
+  resumeText: string,
+  jobDescription: string
+): Promise<ScoreResponse> {
+  // Extract data using AI
+  const { requiredSkills, preferredSkills, resumeSkills, keywords } = await extractScoringData(
+    resumeText,
+    jobDescription
+  );
+
+  // Normalize skills for comparison (case-insensitive, trim whitespace)
+  const normalizeSkill = (skill: string) => skill.toLowerCase().trim();
+  const normalizedResumeSkills = new Set(resumeSkills.map(normalizeSkill));
+  const normalizedRequiredSkills = requiredSkills.map(normalizeSkill);
+  const normalizedPreferredSkills = preferredSkills.map(normalizeSkill);
+
+  // Calculate matched and missing skills
+  const matchedRequiredSkills = normalizedRequiredSkills.filter(skill =>
+    normalizedResumeSkills.has(skill)
+  );
+  const missingRequiredSkills = normalizedRequiredSkills.filter(
+    skill => !normalizedResumeSkills.has(skill)
+  );
+
+  // Calculate matched preferred skills
+  const matchedPreferredSkills = normalizedPreferredSkills.filter(skill =>
+    normalizedResumeSkills.has(skill)
+  );
+
+  // Skills Match % = (matched required + 0.5 * matched preferred) / (required + 0.5 * preferred) * 100
+  const requiredWeight = 1.0;
+  const preferredWeight = 0.5;
+  const totalSkillsWeight = normalizedRequiredSkills.length * requiredWeight + 
+                            normalizedPreferredSkills.length * preferredWeight;
+  const matchedSkillsWeight = matchedRequiredSkills.length * requiredWeight + 
+                              matchedPreferredSkills.length * preferredWeight;
+  const skillsMatchPct = totalSkillsWeight > 0 
+    ? Math.min(100, Math.round((matchedSkillsWeight / totalSkillsWeight) * 100))
+    : 100; // If no skills specified, give full score
+
+  // Keyword matching (simple text search)
+  const resumeTextLower = resumeText.toLowerCase();
+  const matchedKeywords = keywords.filter(keyword => 
+    resumeTextLower.includes(keyword.toLowerCase())
+  );
+  const missingKeywords = keywords.filter(keyword => 
+    !resumeTextLower.includes(keyword.toLowerCase())
+  );
+
+  // Keyword Match % (30% weight in overall)
+  const keywordMatchPct = keywords.length > 0
+    ? Math.round((matchedKeywords.length / keywords.length) * 100)
+    : 100;
+
+  // Overall Match % = 60% skills + 30% keywords + 10% role/title alignment (simplified)
+  const overallMatchPct = Math.round(
+    skillsMatchPct * 0.6 + keywordMatchPct * 0.3 + 100 * 0.1 // Role alignment assumed 100 for now
+  );
+
+  // Determine ranking
+  let ranking: ScoreRanking;
+  if (overallMatchPct >= 75) {
+    ranking = 'Strong';
+  } else if (overallMatchPct >= 50) {
+    ranking = 'Moderate';
+  } else {
+    ranking = 'Weak';
+  }
+
+  // Generate notes
+  const notes: string[] = [];
+  if (matchedRequiredSkills.length > 0) {
+    notes.push(`Matched ${matchedRequiredSkills.length} of ${normalizedRequiredSkills.length} required skills`);
+  }
+  if (missingRequiredSkills.length > 0) {
+    notes.push(`Missing ${missingRequiredSkills.length} required skills`);
+  }
+  if (matchedKeywords.length > 0) {
+    notes.push(`Matched ${matchedKeywords.length} of ${keywords.length} keywords`);
+  }
+  if (notes.length === 0) {
+    notes.push('Analysis complete');
+  }
+
+  return {
+    overallMatchPct,
+    skillsMatchPct,
+    ranking,
+    matchedSkills: [...new Set(matchedRequiredSkills.concat(matchedPreferredSkills))], // Deduplicated
+    missingSkills: missingRequiredSkills,
+    matchedKeywords,
+    missingKeywords,
+    notes,
+  };
 }
 
 /**
@@ -271,5 +464,147 @@ Provide a comprehensive layout analysis with specific issues and recommendations
   const response = await callAI(prompt, systemPrompt);
   const parsed = JSON.parse(response);
   return parsed as LayoutAnalysis;
+}
+
+/**
+ * Generate a tailored cover letter for a job application
+ */
+export async function generateCoverLetter(
+  resumeText: string,
+  jobDescription: string,
+  options: {
+    tone?: CoverLetterTone;
+    length?: CoverLetterLength;
+    companyName?: string;
+    roleTitle?: string;
+    hiringManager?: string;
+    location?: string;
+    keyHighlights?: string[];
+    userName?: string;
+    contactInfo?: string;
+  } = {}
+): Promise<CoverLetterResponse> {
+  const {
+    tone = 'Professional',
+    length = 'Standard',
+    companyName,
+    roleTitle,
+    hiringManager,
+    location,
+    keyHighlights = [],
+    userName,
+    contactInfo,
+  } = options;
+
+  // Determine word count target
+  const wordCountTarget = length === 'Short' ? '200-250 words' : '300-400 words';
+
+  // Build context for the prompt
+  let contextInfo = '';
+  if (companyName) contextInfo += `\nCompany: ${companyName}`;
+  if (roleTitle) contextInfo += `\nRole: ${roleTitle}`;
+  if (hiringManager) contextInfo += `\nHiring Manager: ${hiringManager}`;
+  if (location) contextInfo += `\nLocation: ${location}`;
+  if (keyHighlights.length > 0) {
+    contextInfo += `\nKey Achievements to Highlight:\n${keyHighlights.map(h => `- ${h}`).join('\n')}`;
+  }
+
+  const systemPrompt = `You are an expert cover letter writer specializing in ATS-friendly, professional cover letters.
+
+CRITICAL REQUIREMENTS:
+1. Output ONLY the cover letter text - no JSON, no markdown formatting, no explanations, no metadata
+2. The cover letter must be ATS-friendly: plain text, no tables, no fancy symbols, no images
+3. Use exactly ${wordCountTarget} words
+4. Write in a ${tone.toLowerCase()} tone
+5. Structure: 3-5 paragraphs maximum
+   - Opening paragraph: Express interest and position yourself
+   - 1-3 body paragraphs: Highlight relevant experience, achievements, and fit
+   - Closing paragraph: Call to action and thank you
+6. Use specific, measurable achievements from the resume when available (numbers, projects, results)
+7. DO NOT hallucinate or invent information:
+   - If company name is not provided, use neutral phrasing like "your organization"
+   - If hiring manager name is not provided, use "Dear Hiring Manager" or "Dear [Company] Team"
+   - If role title is not provided, reference the position from the job description
+8. Avoid repetition and fluff
+9. Be specific to the job description - reference key requirements and show how you meet them
+10. Use line breaks between paragraphs (double line break)
+
+Output format: Plain text cover letter only, with double line breaks between paragraphs.`;
+
+  let prompt = `Write a tailored cover letter based on the following resume and job description.${contextInfo}
+
+RESUME:
+${resumeText}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+${userName ? `\nApplicant Name: ${userName}` : ''}
+${contactInfo ? `\nContact Info: ${contactInfo}` : ''}
+
+Generate a ${tone.toLowerCase()}, ${wordCountTarget} cover letter that:
+- Highlights the most relevant experience and achievements from the resume
+- Demonstrates clear alignment with the job requirements
+- Uses specific examples and measurable results
+- Shows enthusiasm and professionalism
+- Is tailored specifically to this role and company`;
+
+  const response = await callAI(prompt, systemPrompt);
+  
+  // Clean up the response - remove any JSON formatting if AI added it
+  let coverLetterText = response.trim();
+  
+  // Remove markdown code blocks if present
+  coverLetterText = coverLetterText.replace(/^```[\w]*\n?/gm, '').replace(/\n?```$/gm, '');
+  
+  // Extract JSON if AI wrapped it (some models do this)
+  const jsonMatch = coverLetterText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.coverLetter) {
+        coverLetterText = parsed.coverLetter;
+      } else if (typeof parsed === 'string') {
+        coverLetterText = parsed;
+      }
+    } catch {
+      // Not valid JSON, use as-is
+    }
+  }
+
+  // Try to detect company and role from job description if not provided
+  let detectedCompany: string | null = companyName || null;
+  let detectedRole: string | null = roleTitle || null;
+
+  if (!detectedCompany || !detectedRole) {
+    // Simple extraction - look for common patterns
+    const companyMatch = jobDescription.match(/(?:at|with|for)\s+([A-Z][a-zA-Z\s&]+?)(?:\s|,|$)/i);
+    if (companyMatch && !detectedCompany) {
+      detectedCompany = companyMatch[1].trim();
+    }
+
+    const roleMatch = jobDescription.match(/(?:position|role|job|opening)[:\s]+([A-Z][a-zA-Z\s]+?)(?:\s|,|$)/i);
+    if (roleMatch && !detectedRole) {
+      detectedRole = roleMatch[1].trim();
+    }
+  }
+
+  // Extract key bullets/achievements mentioned in the cover letter
+  const bulletsUsed: string[] = [];
+  if (keyHighlights.length > 0) {
+    // Check which highlights were actually used
+    keyHighlights.forEach(highlight => {
+      if (coverLetterText.toLowerCase().includes(highlight.toLowerCase().substring(0, 20))) {
+        bulletsUsed.push(highlight);
+      }
+    });
+  }
+
+  return {
+    coverLetter: coverLetterText,
+    bulletsUsed,
+    detectedCompany,
+    detectedRole,
+  };
 }
 
