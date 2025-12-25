@@ -419,15 +419,16 @@ export async function calculateScore(
     notes.push('Analysis complete');
   }
 
+  // Ensure all arrays are always defined (never undefined)
   return {
     overallMatchPct,
     skillsMatchPct,
     ranking,
     matchedSkills: [...new Set(matchedRequiredSkills.concat(matchedPreferredSkills))], // Deduplicated
-    missingSkills: missingRequiredSkills,
-    matchedKeywords,
-    missingKeywords,
-    notes,
+    missingSkills: missingRequiredSkills ?? [],
+    matchedKeywords: matchedKeywords ?? [],
+    missingKeywords: missingKeywords ?? [],
+    notes: notes ?? [],
   };
 }
 

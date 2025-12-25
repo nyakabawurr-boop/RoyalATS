@@ -16,6 +16,10 @@ export function ScoreComparisonCard({
   afterScore,
   loading,
 }: ScoreComparisonCardProps) {
+  // Use fallback arrays to safely handle potentially undefined values
+  const beforeMissing = beforeScore?.missingSkills ?? []
+  const afterMissing = afterScore?.missingSkills ?? []
+
   const getRankingColor = (ranking: ScoreRanking) => {
     switch (ranking) {
       case 'Strong':
@@ -100,10 +104,10 @@ export function ScoreComparisonCard({
                     {beforeScore.skillsMatchPct}%
                   </span>
                 </div>
-                {beforeScore.missingSkills && beforeScore.missingSkills.length > 0 && (
+                {beforeMissing.length > 0 && (
                   <div className="text-xs text-gray-500 mt-2">
-                    Missing: {beforeScore.missingSkills.slice(0, 3).join(', ')}
-                    {beforeScore.missingSkills.length > 3 && '...'}
+                    Missing: {beforeMissing.slice(0, 3).join(', ')}
+                    {beforeMissing.length > 3 && '...'}
                   </div>
                 )}
               </div>
@@ -168,13 +172,13 @@ export function ScoreComparisonCard({
                     )}
                   </div>
                 </div>
-                {afterScore.missingSkills.length > 0 && (
+                {afterMissing.length > 0 && (
                   <div className="text-xs text-gray-500 mt-2">
-                    Missing: {afterScore.missingSkills.slice(0, 3).join(', ')}
-                    {afterScore.missingSkills.length > 3 && '...'}
+                    Missing: {afterMissing.slice(0, 3).join(', ')}
+                    {afterMissing.length > 3 && '...'}
                   </div>
                 )}
-                {beforeScore && beforeScore.missingSkills && afterScore.missingSkills.length < beforeScore.missingSkills.length && (
+                {afterMissing.length < beforeMissing.length && (
                   <div className="text-xs text-green-600 mt-2 flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
                     Improved skill alignment

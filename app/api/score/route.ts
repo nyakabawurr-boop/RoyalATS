@@ -79,7 +79,17 @@ export async function POST(request: NextRequest) {
     // Calculate score
     const score = await calculateScore(resumeText.trim(), jobDescription.trim())
 
-    return NextResponse.json(score)
+    // Normalize arrays to ensure they're never undefined
+    const normalizedScore = {
+      ...score,
+      matchedSkills: score.matchedSkills ?? [],
+      missingSkills: score.missingSkills ?? [],
+      matchedKeywords: score.matchedKeywords ?? [],
+      missingKeywords: score.missingKeywords ?? [],
+      notes: score.notes ?? [],
+    }
+
+    return NextResponse.json(normalizedScore)
   } catch (error) {
     console.error('Score calculation error:', error)
     return NextResponse.json(
