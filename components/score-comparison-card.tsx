@@ -174,7 +174,7 @@ export function ScoreComparisonCard({
                     {afterScore.missingSkills.length > 3 && '...'}
                   </div>
                 )}
-                {afterScore.missingSkills.length < beforeScore?.missingSkills.length && (
+                {beforeScore?.missingSkills && afterScore.missingSkills.length < beforeScore.missingSkills.length && (
                   <div className="text-xs text-green-600 mt-2 flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
                     Improved skill alignment
