@@ -11,14 +11,35 @@ interface ScoreComparisonCardProps {
   loading?: 'before' | 'after' | null
 }
 
+/**
+ * Normalize score response to ensure all arrays are always defined (never undefined)
+ * This prevents TypeScript errors and runtime crashes
+ */
+function normalizeScore(score: ScoreResponse | null): ScoreResponse | null {
+  if (!score) return null
+  
+  return {
+    ...score,
+    missingSkills: score.missingSkills ?? [],
+    matchedSkills: score.matchedSkills ?? [],
+    missingKeywords: score.missingKeywords ?? [],
+    matchedKeywords: score.matchedKeywords ?? [],
+    notes: score.notes ?? [],
+  }
+}
+
 export function ScoreComparisonCard({
   beforeScore,
   afterScore,
   loading,
 }: ScoreComparisonCardProps) {
-  // Use fallback arrays to safely handle potentially undefined values
-  const beforeMissing = beforeScore?.missingSkills ?? []
-  const afterMissing = afterScore?.missingSkills ?? []
+  // Normalize scores to ensure all arrays are always defined
+  const before = normalizeScore(beforeScore)
+  const after = normalizeScore(afterScore)
+  
+  // Use safe fallback arrays (additional safety layer)
+  const beforeMissing = before?.missingSkills ?? []
+  const afterMissing = after?.missingSkills ?? []
 
   const getRankingColor = (ranking: ScoreRanking) => {
     switch (ranking) {
@@ -81,27 +102,27 @@ export function ScoreComparisonCard({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {beforeScore ? (
+          {before ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-4xl font-bold">
-                    <span className={getScoreColor(beforeScore.overallMatchPct)}>
-                      {beforeScore.overallMatchPct}%
+                    <span className={getScoreColor(before.overallMatchPct)}>
+                      {before.overallMatchPct}%
                     </span>
                   </div>
                   <div className="text-sm text-gray-600">Overall Match</div>
                 </div>
-                <Badge className={getRankingColor(beforeScore.ranking)}>
-                  {beforeScore.ranking}
+                <Badge className={getRankingColor(before.ranking)}>
+                  {before.ranking}
                 </Badge>
               </div>
 
               <div className="space-y-2 pt-4 border-t">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Skills Match</span>
-                  <span className={`font-semibold ${getScoreColor(beforeScore.skillsMatchPct)}`}>
-                    {beforeScore.skillsMatchPct}%
+                  <span className={`font-semibold ${getScoreColor(before.skillsMatchPct)}`}>
+                    {before.skillsMatchPct}%
                   </span>
                 </div>
                 {beforeMissing.length > 0 && (
@@ -135,26 +156,26 @@ export function ScoreComparisonCard({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {afterScore ? (
+          {after ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-4xl font-bold">
-                    <span className={getScoreColor(afterScore.overallMatchPct)}>
-                      {afterScore.overallMatchPct}%
+                    <span className={getScoreColor(after.overallMatchPct)}>
+                      {after.overallMatchPct}%
                     </span>
-                    {beforeScore && (
+                    {before && (
                       <span className="ml-3 text-lg">
                         <DeltaDisplay
-                          delta={calculateDelta(beforeScore.overallMatchPct, afterScore.overallMatchPct)}
+                          delta={calculateDelta(before.overallMatchPct, after.overallMatchPct)}
                         />
                       </span>
                     )}
                   </div>
                   <div className="text-sm text-gray-600">Overall Match</div>
                 </div>
-                <Badge className={getRankingColor(afterScore.ranking)}>
-                  {afterScore.ranking}
+                <Badge className={getRankingColor(after.ranking)}>
+                  {after.ranking}
                 </Badge>
               </div>
 
@@ -162,12 +183,12 @@ export function ScoreComparisonCard({
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Skills Match</span>
                   <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${getScoreColor(afterScore.skillsMatchPct)}`}>
-                      {afterScore.skillsMatchPct}%
+                    <span className={`font-semibold ${getScoreColor(after.skillsMatchPct)}`}>
+                      {after.skillsMatchPct}%
                     </span>
-                    {beforeScore && (
+                    {before && (
                       <DeltaDisplay
-                        delta={calculateDelta(beforeScore.skillsMatchPct, afterScore.skillsMatchPct)}
+                        delta={calculateDelta(before.skillsMatchPct, after.skillsMatchPct)}
                       />
                     )}
                   </div>

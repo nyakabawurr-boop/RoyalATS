@@ -19,8 +19,12 @@ export function saveOptimizeSession(session: Partial<OptimizeSession>): void {
   try {
     const existing = getOptimizeSession()
     const updated: OptimizeSession = {
-      ...existing,
-      ...session,
+      resumeText: session.resumeText ?? existing?.resumeText ?? '',
+      jobDescription: session.jobDescription ?? existing?.jobDescription ?? '',
+      optimizedResumeText: session.optimizedResumeText ?? existing?.optimizedResumeText,
+      beforeScore: session.beforeScore ?? existing?.beforeScore,
+      afterScore: session.afterScore ?? existing?.afterScore,
+      plan: session.plan ?? existing?.plan,
       updatedAt: new Date().toISOString(),
     }
     localStorage.setItem(OPTIMIZE_SESSION_KEY, JSON.stringify(updated))
