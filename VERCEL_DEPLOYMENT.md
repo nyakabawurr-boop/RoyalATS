@@ -49,6 +49,8 @@ Vercel will auto-detect Next.js, but verify these settings:
 
 ### 3. Set Up Environment Variables
 
+**📖 For detailed step-by-step instructions, see [VERCEL_ENV_SETUP.md](./VERCEL_ENV_SETUP.md)**
+
 In the Vercel project settings, add these environment variables:
 
 #### Required Variables:

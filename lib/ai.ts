@@ -58,7 +58,12 @@ async function callOpenAI(prompt: string, systemPrompt: string): Promise<string>
 async function callGemini(prompt: string, systemPrompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not set in environment variables');
+    const aiProvider = getAIProvider();
+    throw new Error(
+      `AI_PROVIDER is set to "${aiProvider}" but GEMINI_API_KEY is not set in environment variables. ` +
+      `Please set GEMINI_API_KEY in your Vercel environment variables. ` +
+      `Go to your Vercel project → Settings → Environment Variables and add GEMINI_API_KEY.`
+    );
   }
 
   // Dynamically import the Google Generative AI SDK
@@ -133,6 +138,13 @@ async function callAI(prompt: string, systemPrompt: string): Promise<string> {
     // Extract JSON in case there's extra text
     return extractJSON(response);
   } else {
+    // Check if OpenAI API key is available before calling
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error(
+        `AI_PROVIDER is set to "${aiProvider}" but OPENAI_API_KEY is not set in environment variables. ` +
+        `Please set OPENAI_API_KEY in your Vercel environment variables, or set AI_PROVIDER="gemini" and GEMINI_API_KEY instead.`
+      );
+    }
     return callOpenAI(prompt, systemPrompt);
   }
 }
