@@ -100,7 +100,7 @@ export function ScoreComparisonCard({
                     {beforeScore.skillsMatchPct}%
                   </span>
                 </div>
-                {beforeScore.missingSkills.length > 0 && (
+                {beforeScore.missingSkills && beforeScore.missingSkills.length > 0 && (
                   <div className="text-xs text-gray-500 mt-2">
                     Missing: {beforeScore.missingSkills.slice(0, 3).join(', ')}
                     {beforeScore.missingSkills.length > 3 && '...'}
